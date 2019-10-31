@@ -76,17 +76,77 @@ std::vector<double> Network::recoveries() const {
     return vals;
 }
 
+
+std::pair<size_t, double> Network::degree(const size_t& n) const {
+    std::pair<size_t, double> factors (0,0);
+    for (linkmap::const_iterator i = links.cbegin() ; i != links.cend() ; ++i) {
+        if (i -> first.first == n) {
+            ++factors.first;
+            factors.second += i -> second;
+        }
+    }
+return factors;
+}
+
+
+std::vector<std::pair<size_t, double> > Network::neighbors(const size_t& n) const {
+    std::vector<std::pair<size_t, double>> _neighbors;
+    for (linkmap::const_iterator i = links.cbegin() ; i != links.cend() ; ++i) {
+        if (i -> first.first == n) {
+            std::pair<size_t, double> neighbor;
+            neighbor.first = i -> first.second;
+            neighbor.second = i -> second;
+            _neighbors.push_back(neighbor);
+        }
+    }
+return _neighbors;
+}
+
+std::set<size_t> Network::step(const std::vector<double>& thalamic) {
+
+    std::set<size_t> firing_neurons;
+
+    for (size_t i = 0 ; i < neurons.size() ; ++i) {
+
+        neurons[i].input(to_put_in(i,thalamic[i]));
+
+        if (neurons[i].firing()) {
+            firing_neurons.insert(i);
+            neurons[i].reset();
+        }
+
+        neurons[i].step();
+    }
+    return firing_neurons;
+}
+
+double Network::to_put_in(const size_t &i, const double &J) {
+
+    double w = 1.0;
+    if (neurons[i].is_inhibitory()) { w = 2.0/5.0; }
+    double sum_inh = 0.0 , sum_exc = 0.0;
+    for (auto n : neighbors(i)) {
+        if (neurons[n.first].firing())
+        {
+            if (neurons[n.first].is_inhibitory()) { sum_inh += n.second; }
+            else { sum_exc += n.second; }
+        }
+    }
+
+return (w * J + 0.5 * sum_exc + sum_inh);
+}
+
 void Network::print_params(std::ostream *_out) {
     (*_out) << "Type\ta\tb\tc\td\tInhibitory\tdegree\tvalence" << std::endl;
     for (size_t nn=0; nn<size(); nn++) {
         std::pair<size_t, double> dI = degree(nn);
-        (*_out) << neurons[nn].formatted_params() 
+        (*_out) << neurons[nn].formatted_params()
                 << '\t' << dI.first << '\t' << dI.second
                 << std::endl;
     }
 }
 
-void Network::print_head(const std::map<std::string, size_t> &_nt, 
+void Network::print_head(const std::map<std::string, size_t> &_nt,
                          std::ostream *_out) {
     size_t total = 0;
     for (auto It : _nt) {
@@ -100,7 +160,7 @@ void Network::print_head(const std::map<std::string, size_t> &_nt,
             }
     }
     if (total<size())
-        for (auto In : neurons) 
+        for (auto In : neurons)
             if (In.is_type("RS")) {
                 (*_out) << '\t' << "RS.v" << '\t' << "RS.u" << '\t' << "RS.I";
                 break;
@@ -108,20 +168,20 @@ void Network::print_head(const std::map<std::string, size_t> &_nt,
     (*_out) << std::endl;
 }
 
-void Network::print_traj(const int time, const std::map<std::string, size_t> &_nt, 
+void Network::print_traj(const int time, const std::map<std::string, size_t> &_nt,
                          std::ostream *_out) {
     (*_out)  << time;
     size_t total = 0;
     for (auto It : _nt) {
         total += It.second;
-        for (auto In : neurons) 
+        for (auto In : neurons)
             if (In.is_type(It.first)) {
                 (*_out) << '\t' << In.formatted_values();
                 break;
             }
     }
     if (total<size())
-        for (auto In : neurons) 
+        for (auto In : neurons)
             if (In.is_type("RS")) {
                 (*_out) << '\t' << In.formatted_values();
                 break;

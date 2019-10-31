@@ -9,6 +9,7 @@ Neuron n1, n2;
 size_t nlinks = 1000;
 double noise = 10.;
 
+
 TEST(simulationTest, parse) {
     Simulation s1(10, 1);
     s1.parse_types("");
@@ -96,6 +97,7 @@ TEST(networkTest, connect) {
     EXPECT_DOUBLE_EQ(noise,    net.neuron(excit_idx).input());
     EXPECT_DOUBLE_EQ(.4*noise, net.neuron(inhib1).input());
 }
+
 
 int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);
